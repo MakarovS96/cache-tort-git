@@ -170,6 +170,7 @@ Returns root temp folder</Description>
     
     set @..#Storage@("settings","namespaceTemp") = ..AddSlash(settings("namespaceTemp"))
     set @..#Storage@("settings","groupByFolder") = $case(settings("groupByFolder"), "":"", :1)
+    set @..#Storage@("settings","typeOfSources") = 1 // 1 - XML, 0 - UDL
     
     quit $$$OK
 ]]></Implementation>
@@ -212,6 +213,23 @@ Returns root temp folder</Description>
 <FormalSpec>menuItemName:%String</FormalSpec>
 <ReturnType>%Boolean</ReturnType>
 <Implementation><![CDATA[$Find(..#ImportAfterGitMenuItems, ","_menuItemName_",") > 0
+]]></Implementation>
+</Method>
+
+<Method name="GetTypeOfSources">
+<Description>
+Type:
+0 - UDL
+1 - XML</Description>
+<ClassMethod>1</ClassMethod>
+<FormalSpec>menuItemName:%String</FormalSpec>
+<ReturnType>%Boolean</ReturnType>
+<Implementation><![CDATA[
+	if $data(@..#Storage@("settings","typeOfSources"), res) { 
+		quit res
+	} else { 
+		quit 1 
+	}
 ]]></Implementation>
 </Method>
 
@@ -269,6 +287,8 @@ Returns root temp folder</Description>
         }elseif (menuItemName = "%OpenRepoFolder") {
 	        set Action = 3
 	        set Target = ..TempFolder()
+        }elseif (menuItemName = "%Sources") {
+	        set @..#Storage@("settings","typeOfSources") = '..GetTypeOfSources()
     	}elseif ..IsMenuGitCommand(menuItemName) {
                 set Action = 3
                 #dim command As %String = $ZConvert($Extract(menuItemName, 2, *), "L")
@@ -397,7 +417,11 @@ adds last slash if not present<br/>]]></Description>
     
     // write "name=",name,!
     // write "external name = ", $Translate(name," *?","___")_".xml", !
-    quit $Translate(name," *?","___")_".xml"
+    if ..GetTypeOfSources() {
+    	quit $Translate(name," *?","___")_".xml"
+    } else {
+	    quit $Translate(name," *?","___")
+	}
 ]]></Implementation>
 </Method>
 
@@ -921,7 +945,12 @@ if <var>force</var> = 1 then imports in any case.]]></Description>
     #dim sc As %Status = $$$OK
  
     if ..IsRoutineOutdated(InternalName) || force {
-        set sc = $system.OBJ.Load(filename,"-l-d")
+	    if ..GetTypeOfSources() {
+        	set sc = $system.OBJ.Load(filename,"-l-d")
+	    } else {
+		    set sc = ##class(UDL).Import(InternalName, filename)
+		}
+		
         if sc {
             set sc = ..UpdateRoutineTSH(InternalName, fileTSH)
             if ..Type(InternalName) = "prj" {
@@ -945,7 +974,11 @@ if <var>force</var> = 1 then imports in any case.]]></Description>
 <ReturnType>%Status</ReturnType>
 <Implementation><![CDATA[
     #define DoNotLoad 1
-    set res = $system.OBJ.ImportDir(..TempFolder(),"*.xml","-d",.err,1, .itemList, $$$DoNotLoad)
+    if ..GetTypeOfSources() {
+    	set res = $system.OBJ.ImportDir(..TempFolder(),"*.xml","-d",.err,1, .itemList, $$$DoNotLoad)
+    } else {
+	    set res = ##class(UDL).getItemList(.itemList)
+	}
     
     if '$Data(itemList) && $$$ISERR(res) {
 	    quit res
@@ -1103,7 +1136,11 @@ if <var>force</var> = 1 then imports in any case.]]></Description>
             
             #dim filename As %String = ..FullExternalName(InternalName)
             write "exporting new version of ", InternalName, " to ", filename,!
-            $$$QuitOnError($system.OBJ.Export(InternalName, filename,"-d/diff"))
+            if ..GetTypeOfSources() {
+            	$$$QuitOnError($system.OBJ.Export(InternalName, filename,"-d/diff"))
+            } else {
+	            $$$QuitOnError(##class(UDL).Export(InternalName, filename))
+	        }
             $$$QuitOnError(..UpdateRoutineTSH(InternalName, $Horolog))
         } else {
 	        write !,InternalName, " is not newer than on-disk version, skipping export"

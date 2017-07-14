@@ -1,0 +1,354 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Export generator="Cache" version="25">
+<Class name="%SourceControl.Git.UDL">
+<IncludeCode>%occStatus,%occErrors</IncludeCode>
+<TimeCreated>64476,66997.781615</TimeCreated>
+
+<Method name="Export">
+<ClassMethod>1</ClassMethod>
+<FormalSpec>InternalName,filename</FormalSpec>
+<ReturnType>%Status</ReturnType>
+<Implementation><![CDATA[
+	set ext = ##class(Utils).Type(InternalName)
+	
+	if ext = "cls" {
+		quit ..exportCls(InternalName, filename)
+	} 
+	elseif (ext = "mac") || (ext = "inc") || (ext = "int") {
+		quit ..exportRoutines(InternalName, filename, ext)
+	} 
+	elseif ext = "dfi" {
+		quit ..exportDfi(InternalName, filename)
+	}
+	elseif ext = "prj" {
+		quit $system.OBJ.Export(InternalName, filename,"-d/diff")
+	} 
+	else {
+		quit ..exportOther(InternalName, filename)
+	}
+	quit $$$OK
+]]></Implementation>
+</Method>
+
+<Method name="exportCls">
+<ClassMethod>1</ClassMethod>
+<FormalSpec>InternalName:%String,filename:%String</FormalSpec>
+<ReturnType>%Status</ReturnType>
+<Implementation><![CDATA[
+	set sc = $$$OK
+	
+	set namespace = $namespace
+	
+	// get class content
+	set sc = ##class(%Compiler.UDL.TextServices).GetTextAsString(namespace, InternalName, .classContent)
+	quit:$$$ISERR(sc) sc
+	
+	// write class content to file
+	set fileStream = ##class(%FileCharacterStream).%New()
+	set fileStream.Filename = filename
+	
+	set sc = fileStream.Write(classContent)
+	quit:$$$ISERR(sc) sc
+	
+	set sc = fileStream.SaveStream()
+	
+	quit sc
+]]></Implementation>
+</Method>
+
+<Method name="exportRoutines">
+<ClassMethod>1</ClassMethod>
+<FormalSpec>InternalName:%String,filename:%String,ext</FormalSpec>
+<ReturnType>%Status</ReturnType>
+<Implementation><![CDATA[
+	set sc = $$$OK
+	set rtn = ##class(%RoutineMgr).%OpenId(InternalName)
+ 	
+ 	// write content to file
+	set fileStream = ##class(%FileCharacterStream).%New()
+	set fileStream.Filename = filename
+	
+	// transform routine.mac -> routine
+	/*set routineName = $extract(InternalName, 0, $find(InternalName, ".") - 2)
+	
+	if ext = "mac" {
+		do fileStream.WriteLine("ROUTINE " _ routineName)
+	} elseif ext = "inc" {
+		do fileStream.WriteLine("ROUTINE " _ routineName _ " [Type=INC]")
+	} elseif ext = "int" {
+		do fileStream.WriteLine("ROUTINE " _ routineName _ " [Type=INT,Generated]")
+	}*/
+	
+	while 'rtn.Code.AtEnd {
+		do fileStream.WriteLine(rtn.Code.ReadLine())
+	}
+	
+	set sc = fileStream.%Save()
+		
+	quit sc
+]]></Implementation>
+</Method>
+
+<Method name="exportDfi">
+<ClassMethod>1</ClassMethod>
+<FormalSpec>InternalName:%String,filename:%String</FormalSpec>
+<ReturnType>%Status</ReturnType>
+<Implementation><![CDATA[
+	set sc = $$$OK
+	set rtn = ##class(%RoutineMgr).%OpenId(InternalName)
+ 	
+ 	// write content to file
+	set fileStream = ##class(%FileCharacterStream).%New()
+	set fileStream.Filename = filename
+	
+	set sc = fileStream.CopyFromAndSave(rtn.Code)
+	quit:$$$ISERR(sc) sc
+	
+	quit sc
+]]></Implementation>
+</Method>
+
+<Method name="exportOther">
+<ClassMethod>1</ClassMethod>
+<FormalSpec>InternalName:%String,filename:%String</FormalSpec>
+<ReturnType>%Status</ReturnType>
+<Implementation><![CDATA[
+	set sc = $$$OK
+	
+	set serverFileName = $system.CSP.GetFileName(InternalName)
+	
+	set serverFileStream = ##class(%FileCharacterStream).%New()
+	set serverFileStream.Filename = serverFileName
+	
+	set fileStream = ##class(%FileCharacterStream).%New()
+	set fileStream.Filename = filename
+	set sc = fileStream.CopyFromAndSave(serverFileStream)
+	
+	quit sc
+]]></Implementation>
+</Method>
+
+<Method name="Import">
+<ClassMethod>1</ClassMethod>
+<FormalSpec>InternalName:%String,filename:%String</FormalSpec>
+<ReturnType>%Status</ReturnType>
+<Implementation><![CDATA[
+	set sc = $$$OK
+	set ext = ##class(Utils).Type(InternalName)
+	
+	if ext = "cls" {
+		quit ..importCls(InternalName, filename)
+	} 
+	elseif (ext = "mac") || (ext = "inc") || (ext = "int") {
+		quit ..importRoutines(InternalName, filename)
+	} 
+	elseif ext = "dfi" {
+		quit ..importDfi(InternalName, filename)
+	}
+	elseif ext = "prj" {
+		quit $system.OBJ.Load(filename,"-l-d")
+	} 
+	else {
+		quit ..importOther(InternalName, filename)
+	}
+	
+	quit sc
+]]></Implementation>
+</Method>
+
+<Method name="importCls">
+<ClassMethod>1</ClassMethod>
+<FormalSpec>InternalName,filename</FormalSpec>
+<Implementation><![CDATA[
+	set sc = $$$OK
+	
+	set name = $replace(InternalName, ".cls", "")
+	if '##class(%Dictionary.ClassDefinition).%ExistsId(name) {
+		set clsDef = ##class(%Dictionary.ClassDefinition).%New()
+		set clsDef.Name = $replace(name, ".cls", "")
+		set sc = clsDef.%Save()
+		quit:$$$ISERR(sc) sc
+	}
+	
+	set sc = ##class(%Compiler.UDL.TextServices).SetTextFromFile($namespace, InternalName, filename)
+	
+	quit sc
+]]></Implementation>
+</Method>
+
+<Method name="importRoutines">
+<ClassMethod>1</ClassMethod>
+<FormalSpec>InternalName,filename</FormalSpec>
+<Implementation><![CDATA[
+	set sc = $$$OK
+	set $piece(InternalName, ".", *) = $zconvert($piece(InternalName, ".", *), "U")
+	
+	
+	set file = ##class(%FileCharacterStream).%New()
+	set file.Filename = filename
+	
+	if ##class(%Routine).%ExistsId(InternalName) {
+		set rtn = ##class(%RoutineMgr).%OpenId(InternalName)
+		set sc = rtn.Code.CopyFrom(file)
+		quit:$$$ISERR(sc) sc
+	
+		set sc = rtn.Code.Save()
+	} else {
+		set rtn = ##class(%Routine).%New(InternalName)
+		set sc = rtn.CopyFrom(file)
+		quit:$$$ISERR(sc) sc
+		
+		set sc = rtn.Save()
+	}
+	
+	quit sc
+]]></Implementation>
+</Method>
+
+<Method name="importDfi">
+<ClassMethod>1</ClassMethod>
+<FormalSpec>InternalName,filename</FormalSpec>
+<Implementation><![CDATA[
+	set sc = $$$OK
+	
+	set $piece(InternalName, ".", *) = $zconvert($piece(InternalName, ".", *), "U")
+	
+	set file = ##class(%FileCharacterStream).%New()
+	set file.Filename = filename
+	
+	if '##class(%DeepSee.UI.FolderItemDocument).%ExistsId(InternalName) {
+		try {
+	        set tDoc = ##class(%DeepSee.UI.FolderItemDocument).%New(InternalName)
+	        set sc = tDoc.ImportFromXML(file)
+	        
+	        set sc = tDoc.Save()
+	    } Catch e {
+	        set sc = e.AsStatus()
+	    }
+	} else {
+		set tDoc = ##class(%DeepSee.UI.FolderItemDocument).%OpenId(InternalName)
+		set sc = tDoc.ImportFromXML(file)
+		set sc = tDoc.Save()
+	}
+	
+	quit sc
+]]></Implementation>
+</Method>
+
+<Method name="importOther">
+<ClassMethod>1</ClassMethod>
+<FormalSpec>InternalName,filename</FormalSpec>
+<Implementation><![CDATA[
+	set sc = $$$OK
+	
+	set serverFileName = $system.CSP.GetFileName(InternalName)
+	
+	set serverFileStream = ##class(%FileCharacterStream).%New()
+	set serverFileStream.Filename = serverFileName
+	
+	set fileStream = ##class(%FileCharacterStream).%New()
+	set fileStream.Filename = filename
+	set sc = serverFileStream.CopyFromAndSave(fileStream)
+	
+	quit sc
+]]></Implementation>
+</Method>
+
+<Method name="getFileList">
+<ClassMethod>1</ClassMethod>
+<FormalSpec><![CDATA[&fileList,dir]]></FormalSpec>
+<ReturnType>%Status</ReturnType>
+<Implementation><![CDATA[
+	set sc = $$$OK 
+	set trs = ##class(%ResultSet).%New("%Library.File:FileSet")
+ 	set sc = trs.Execute(dir, "*")
+	while trs.Next() {
+		set name = trs.Get("Name")
+ 		set type = trs.Get("Type")
+ 		if type = "D" {
+	 		if $find(name,$translate("/.git/","/",##class(Utils).#Slash)) continue
+	 		set sc = ..getFileList(.fileList, name)
+	 		break:$$$ISERR(sc)
+ 		}
+ 		else {
+	 		set fileList(name)=""
+ 		}
+ 	}
+ 	
+ 	quit sc
+]]></Implementation>
+</Method>
+
+<Method name="getItemList">
+<ClassMethod>1</ClassMethod>
+<FormalSpec><![CDATA[&itemList]]></FormalSpec>
+<ReturnType>%Status</ReturnType>
+<Implementation><![CDATA[
+	set sc = $$$OK
+	
+    set slash = ##class(Utils).#Slash
+	set tempPath = ##class(Utils).NormalizeFolder(##class(Utils).TempFolder())
+	set repoFolder = $piece(tempPath, slash, *-1)
+	set mappingsNode = ##class(Utils).MappingsNode()
+    set mappings = $Data(@mappingsNode, rootFolder)
+    set groupByFolder = ##class(Utils).GroupByFolder()
+    set namespace = $namespace
+    
+    set sc = ..getFileList(.fileList,tempPath)
+    set item = ""
+    for  {
+        set item = $Order(fileList(item))
+        quit:item=""
+        
+        kill type, newItem, extensionSuffix
+        set filename = $Piece(item,slash,*)
+        set type = $Piece(filename,".",$Length(filename,"."))
+        
+        set extensionSuffix = "."_type
+       	set newItem = $piece(item,repoFolder,*)
+       	set newItem = $Piece(newItem,slash,1,*-1)_slash_$piece(filename,".",1,$length(filename,".")-1)
+        
+        if mappings#10 = 1 { // value in root
+		    set rootFolder = ##class(Utils).NormalizeFolder(rootFolder)
+		    set newItem = $piece(newItem,rootFolder,2)
+    	}
+        
+     	if mappings >= 10 { //values in leaves	   	    
+		    if $data(@mappingsNode@(type), folder) {
+			    set folder = ##class(Utils).NormalizeFolder(folder)
+			    set newItem = $piece(newItem,folder,2)
+		    } elseif $find(newItem,$translate("csp/","/",slash)){
+			    if $data(@mappingsNode@("csp"), folder) {
+				    set folder = ##class(Utils).NormalizeFolder(folder)
+				    set newItem = $piece(newItem,folder,2)
+				    set $Piece(newItem, slash, 1) = $system.CSP.GetDefaultApp(namespace)
+				    set newItem = $piece($translate(newItem,slash,"/"),"/",2,*)
+			    }
+			}
+		    
+    	}
+    	
+    	if $extract(newItem, 1) = slash {
+		    set newItem = $piece(newItem, slash, 2, *)
+		}
+    	    	
+    	if type = "cls" {
+        	set newItem = $translate( newItem, slash, ".")
+        	
+	    } elseif groupByFolder {
+		    // If groupByFolder = 1 then we put inc, mac, int in corresponding folder, not in root.
+			// For example project.include.inc will be placed in project\include.inc.xml
+	        set sep = $case(type, "dfi" : "-", : ".")
+		    set newItem = $translate(newItem, slash, sep)
+	    }
+	    
+	    set newItem = $translate( newItem, "_", " ")
+	    
+	    set itemList(newItem_extensionSuffix) = ""
+    }
+    
+    quit sc
+]]></Implementation>
+</Method>
+</Class>
+</Export>

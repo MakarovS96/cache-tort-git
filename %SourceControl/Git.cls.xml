@@ -22,10 +22,8 @@
 <MenuItem Name="%Push" Save = "001"/>
 <MenuItem Separator="true"/>
 <MenuItem Name="%Diff" Save = "001"/>
-<MenuItem Name="%RepoStatus" Save = "001"/>
 <MenuItem Name="%Resolve" Save = "001"/>
 <MenuItem Name="%Revert" Save = "001"/>
-<MenuItem Name="%Log" Save = "001"/>
 <MenuItem Separator="true"/>
 <MenuItem Name="%StashSave" Save = "001"/>
 <MenuItem Name="%StashPop" Save = "001"/>
@@ -36,6 +34,8 @@
 <MenuItem Name="%ImportForce" Save = "001" />
 <MenuItem Separator="true"/>
 <MenuItem Name="%OpenRepoFolder" Save = "001" />
+<MenuItem Separator="true"/>
+<MenuItem Name="%Sources" Save = "001" />
 </Menu>
 <Menu Name="%SourceMenuContext" Type="1">
 <MenuItem Name="%AddToSC"/>
@@ -89,10 +89,10 @@
 			set DisplayName = "Import All"
 		} elseif name = "%ImportForce" {
 			set DisplayName = "Import All Force"
-		}elseif name = "%RepoStatus" && ##class(Utils).GitBinExists() {
-			set DisplayName = "Check for modifications"
 		}elseif name = "%OpenRepoFolder" {
 			set DisplayName = "Open Repo Folder"
+		}elseif name = "%Sources" {
+			set DisplayName = "Sources: "_$case(##class(Utils).GetTypeOfSources(), 1:"XML", 0:"UDL", :"")
 		}
 		elseif ##class(Utils).IsMenuGitCommand(name) && ##class(Utils).GitBinExists() {
 			set DisplayName = $case(name,"%StashSave":"Stash save",
@@ -111,7 +111,7 @@
 			set Enabled = -1
 		}
 	} else {
-		set Enabled = -1 
+		set Enabled = -1
 	}
 	quit $$$OK
 ]]></Implementation>
