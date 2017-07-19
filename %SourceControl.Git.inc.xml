@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Export generator="Cache" version="25">
+<Routine name="%SourceControl.Git" type="INC"><![CDATA[
+#define CacheVer ($system.Version.GetMajor()_"."_$system.Version.GetMinor())
+#define WorkInThisVersion ##Expression($$$CacheVer >= 2015.2)
+]]></Routine>
+</Export>

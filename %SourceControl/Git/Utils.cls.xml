@@ -2,7 +2,7 @@
 <Export generator="Cache" version="25">
 <Class name="%SourceControl.Git.Utils">
 <Abstract>1</Abstract>
-<IncludeCode>%occStatus,%occErrors</IncludeCode>
+<IncludeCode>%occStatus,%occErrors,%SourceControl.Git</IncludeCode>
 <ProcedureBlock>1</ProcedureBlock>
 <TimeCreated>62657,53384.637236</TimeCreated>
 
@@ -225,7 +225,8 @@ Type:
 <FormalSpec>menuItemName:%String</FormalSpec>
 <ReturnType>%Boolean</ReturnType>
 <Implementation><![CDATA[
-	if $data(@..#Storage@("settings","typeOfSources"), res) { 
+	if ('$$$WorkInThisVersion) quit 1
+	if $data(@..#Storage@("settings","typeOfSources"), res) {  
 		quit res
 	} else { 
 		quit 1 

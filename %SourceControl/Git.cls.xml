@@ -2,6 +2,7 @@
 <Export generator="Cache" version="25">
 <Class name="%SourceControl.Git">
 <Import>%SourceControl.Git</Import>
+<IncludeCode>%SourceControl.Git</IncludeCode>
 <Super>%Studio.Extension.Base</Super>
 <TimeCreated>62655,58027.787011</TimeCreated>
 
@@ -93,6 +94,7 @@
 			set DisplayName = "Open Repo Folder"
 		}elseif name = "%Sources" {
 			set DisplayName = "Sources: "_$case(##class(Utils).GetTypeOfSources(), 1:"XML", 0:"UDL", :"")
+			if '$$$WorkInThisVersion set Enabled = 0
 		}
 		elseif ##class(Utils).IsMenuGitCommand(name) && ##class(Utils).GitBinExists() {
 			set DisplayName = $case(name,"%StashSave":"Stash save",
