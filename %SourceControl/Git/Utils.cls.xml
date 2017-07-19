@@ -226,11 +226,8 @@ Type:
 <ReturnType>%Boolean</ReturnType>
 <Implementation><![CDATA[
 	if ('$$$WorkInThisVersion) quit 1
-	if $data(@..#Storage@("settings","typeOfSources"), res) {  
-		quit res
-	} else { 
-		quit 1 
-	}
+	if $data(@..#Storage@("settings","typeOfSources"), res) quit res
+	quit 1
 ]]></Implementation>
 </Method>
 

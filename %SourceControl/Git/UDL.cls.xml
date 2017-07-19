@@ -4,12 +4,6 @@
 <IncludeCode>%occStatus,%occErrors,%SourceControl.Git</IncludeCode>
 <TimeCreated>64476,66997.781615</TimeCreated>
 
-<Method name="test">
-<ClassMethod>1</ClassMethod>
-<Implementation><![CDATA[	quit $$$WorkInThisVersion
-]]></Implementation>
-</Method>
-
 <Method name="Export">
 <ClassMethod>1</ClassMethod>
 <FormalSpec>InternalName,filename</FormalSpec>
