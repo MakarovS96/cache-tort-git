@@ -126,15 +126,19 @@
 <Implementation><![CDATA[
 	set sc = $$$OK
 	#if $$$WorkInThisVersion
-	
 	set serverFileName = $system.CSP.GetFileName(InternalName)
+		
+	set fileDir = $piece(filename,##class(Utils).#Slash,1,*-1)
 	
-	set serverFileStream = ##class(%FileCharacterStream).%New()
-	set serverFileStream.Filename = serverFileName
+	if ('##class(%File).DirectoryExists(fileDir)) {
+		if ('##class(%File).CreateDirectoryChain(fileDir)) {
+			quit $$$ERROR(5001,"We can't create directory: "_fileDir)
+		}
+	}
 	
-	set fileStream = ##class(%FileCharacterStream).%New()
-	set fileStream.Filename = filename
-	set sc = fileStream.CopyFromAndSave(serverFileStream)
+	if ('##class(%File).CopyFile(serverFileName,filename)) {
+		quit $$$ERROR(5001,"We can't copy file: "_serverFileName)
+	}
 	
 	#endif
 	quit sc
@@ -267,12 +271,17 @@
 	
 	set serverFileName = $system.CSP.GetFileName(InternalName)
 	
-	set serverFileStream = ##class(%FileCharacterStream).%New()
-	set serverFileStream.Filename = serverFileName
+	set fileDir = $piece(serverFileName,##class(Utils).#Slash,1,*-1)
 	
-	set fileStream = ##class(%FileCharacterStream).%New()
-	set fileStream.Filename = filename
-	set sc = serverFileStream.CopyFromAndSave(fileStream)
+	if ('##class(%File).DirectoryExists(fileDir)) {
+		if ('##class(%File).CreateDirectoryChain(fileDir)) {
+			quit $$$ERROR(5001,"We can't create directory: "_fileDir)
+		}
+	}
+	
+	if ('##class(%File).CopyFile(filename,serverFileName)) {
+		quit $$$ERROR(5001,"We can't copy file: "_filename)
+	}
 	
 	#endif
 	quit sc
@@ -293,7 +302,7 @@
 		set name = trs.Get("Name")
  		set type = trs.Get("Type")
  		if type = "D" {
-	 		if $find(name,$translate("/.git/","/",##class(Utils).#Slash)) continue
+	 		if $find(name,$replace("/.git/","/",##class(Utils).#Slash)) continue
 	 		set sc = ..getFileList(.fileList, name)
 	 		break:$$$ISERR(sc)
  		}
@@ -342,36 +351,38 @@
 		    set newItem = $piece(newItem,rootFolder,2)
     	}
         
-     	if mappings >= 10 { //values in leaves	   	    
+     	if mappings >= 10 { //values in leaves    
 		    if $data(@mappingsNode@(type), folder) {
 			    set folder = ##class(Utils).NormalizeFolder(folder)
 			    set newItem = $piece(newItem,folder,2)
-		    } elseif $find(newItem,$translate("csp/","/",slash)){
+		    } elseif $find(newItem,$replace("csp/","/",slash)){
 			    if $data(@mappingsNode@("csp"), folder) {
 				    set folder = ##class(Utils).NormalizeFolder(folder)
 				    set newItem = $piece(newItem,folder,2)
-				    set $Piece(newItem, slash, 1) = $system.CSP.GetDefaultApp(namespace)
-				    set newItem = $piece($translate(newItem,slash,"/"),"/",2,*)
 			    }
 			}
-		    
     	}
+    	
+    	if $find(newItem,$replace("csp/","/",slash)) {
+		    set $Piece(newItem, slash, 1) = $system.CSP.GetDefaultApp(namespace)
+			set newItem = $piece($replace(newItem,slash,"/"),"/",2,*)
+	    }
     	
     	if $extract(newItem, 1) = slash {
 		    set newItem = $piece(newItem, slash, 2, *)
 		}
     	    	
     	if type = "cls" {
-        	set newItem = $translate( newItem, slash, ".")
+        	set newItem = $replace( newItem, slash, ".")
         	
 	    } elseif groupByFolder {
 		    // If groupByFolder = 1 then we put inc, mac, int in corresponding folder, not in root.
 			// For example project.include.inc will be placed in project\include.inc.xml
 	        set sep = $case(type, "dfi" : "-", : ".")
-		    set newItem = $translate(newItem, slash, sep)
+		    set newItem = $replace(newItem, slash, sep)
 	    }
 	    
-	    set newItem = $translate( newItem, "_", " ")
+	    set newItem = $replace( newItem, "_", " ")
 	    
 	    set itemList(newItem_extensionSuffix) = ""
     }
