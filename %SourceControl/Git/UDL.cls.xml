@@ -42,12 +42,20 @@
 	#if $$$WorkInThisVersion
 	
 	set namespace = $namespace
+	set fileDir = $piece(filename,##class(Utils).#Slash,1,*-1)
 	
 	// get class content
 	set sc = ##class(%Compiler.UDL.TextServices).GetTextAsString(namespace, InternalName, .classContent)
 	quit:$$$ISERR(sc) sc
 	
 	// write class content to file
+	
+	if ('##class(%File).DirectoryExists(fileDir)) {
+		if ('##class(%File).CreateDirectoryChain(fileDir)) {
+			quit $$$ERROR(5001,"We can't create directory: "_fileDir)
+		}
+	}
+	
 	set fileStream = ##class(%FileCharacterStream).%New()
 	set fileStream.Filename = filename
 	
@@ -70,6 +78,13 @@
 	#if $$$WorkInThisVersion
 	
 	set rtn = ##class(%RoutineMgr).%OpenId(InternalName)
+	set fileDir = $piece(filename,##class(Utils).#Slash,1,*-1)
+	
+	if ('##class(%File).DirectoryExists(fileDir)) {
+		if ('##class(%File).CreateDirectoryChain(fileDir)) {
+			quit $$$ERROR(5001,"We can't create directory: "_fileDir)
+		}
+	}
  	
  	// write content to file
 	set fileStream = ##class(%FileCharacterStream).%New()
@@ -106,6 +121,13 @@
 	#if $$$WorkInThisVersion
 	
 	set rtn = ##class(%RoutineMgr).%OpenId(InternalName)
+	set fileDir = $piece(filename,##class(Utils).#Slash,1,*-1)
+ 	
+ 	if ('##class(%File).DirectoryExists(fileDir)) {
+		if ('##class(%File).CreateDirectoryChain(fileDir)) {
+			quit $$$ERROR(5001,"We can't create directory: "_fileDir)
+		}
+	}
  	
  	// write content to file
 	set fileStream = ##class(%FileCharacterStream).%New()
